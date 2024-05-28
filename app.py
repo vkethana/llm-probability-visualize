@@ -1,25 +1,56 @@
 from openai import OpenAI
+import numpy as np
 import os
+from flask import Flask, render_template, request
 
 client = OpenAI(api_key=os.environ["OPENAI_API_KEY"])
 model = "gpt-3.5-turbo-instruct"
 
 def call_gpt(prompt):
-  '''
-  Call GPT for the beamsearch algorithm
-  '''
 
   response = client.completions.create(model=model,
   prompt=prompt,
-  max_tokens=20,
+  max_tokens=1,
   n=1,
   stop=None,
   temperature=1.3,
   top_p=0.9,
   frequency_penalty=0,
-  logprobs=1,
-  top_logprobs=5,
+  logprobs=5,
   presence_penalty=0.6)
   return response
 
-print(call_gpt("Once upon a time"))
+# Softmax function
+def softmax(x):
+    e_x = np.exp(x - np.max(x))
+    return e_x / e_x.sum()
+
+def get_chart_from_sentence(sentence):
+  response = call_gpt(sentence)
+  probabilities = response.choices[0].logprobs.top_logprobs[0]
+# Extracting scores and normalizing probabilities
+  scores = np.array(list(probabilities.values()))
+  normalized_probs = softmax(scores)
+  output = []
+# Output probabilities for each token
+  for token, probability in zip(probabilities.keys(), normalized_probs):
+      # Print out the raw token, if its "\n" then don't actually print a newline
+      token = token.replace("\n", "\\n")
+      print(f'"{token}" with probability {probability:.2f}')
+      output.append([token, round(probability, 2)])
+
+  return output[0][0]
+
+app = Flask(__name__)
+
+@app.route('/', methods=['GET', 'POST'])
+def index():
+    if request.method == 'POST':
+        sentence = request.form['sentence']
+        extended_sentence = sentence + get_chart_from_sentence(sentence)
+        return render_template('index.html', sentence=extended_sentence)
+    return render_template('index.html')
+
+if __name__ == '__main__':
+    app.run(debug=True)
+

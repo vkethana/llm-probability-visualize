@@ -1,0 +1,19 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Complete Sentence</title>
+</head>
+<body>
+    <h1>Complete Sentence</h1>
+    <form method="post">
+        <label for="sentence">Enter Sentence:</label>
+        <input type="text" id="sentence" name="sentence" required>
+        <button type="submit">Complete</button>
+    </form>
+    {% if sentence %}
+    <p>Extended Sentence: {{ sentence }}</p>
+    {% endif %}
+</body>
+</html>
