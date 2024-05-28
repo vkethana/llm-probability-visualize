@@ -4,9 +4,16 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Complete Sentence</title>
+    <style>
+      table, th, td {
+        border: 1px solid black;
+        border-collapse: collapse;
+        margin: 1em;
+      }
+    </style>
 </head>
 <body>
-    <h1>Complete Sentence</h1>
+    <h1>GPT-2 Probabilities Visualizer</h1>
     <form method="post">
         <label for="sentence">Enter Sentence:</label>
         <input type="text" id="sentence" name="sentence" required>
@@ -14,6 +21,18 @@
     </form>
     {% if sentence %}
     <p>Extended Sentence: {{ sentence }}</p>
+    {% endif %}
+    {% if chart %}
+    <h2>Word Probability</h2>
+    <table>
+    <tr>
+      <th>Word</th><th>Probability</th>
+    {% for key, value in chart %}
+    <tr>
+      <td>{{ key }}</td><td>{{ value }}</td>
+    </tr>
+    {% endfor %}
+    </table>
     {% endif %}
 </body>
 </html>

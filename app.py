@@ -27,6 +27,7 @@ def softmax(x):
 
 def get_chart_from_sentence(sentence):
   response = call_gpt(sentence)
+  print(response)
   probabilities = response.choices[0].logprobs.top_logprobs[0]
 # Extracting scores and normalizing probabilities
   scores = np.array(list(probabilities.values()))
@@ -38,8 +39,8 @@ def get_chart_from_sentence(sentence):
       token = token.replace("\n", "\\n")
       print(f'"{token}" with probability {probability:.2f}')
       output.append([token, round(probability, 2)])
-
-  return output[0][0]
+  output.sort(key=lambda x: x[1], reverse=True)
+  return output
 
 app = Flask(__name__)
 
@@ -47,8 +48,9 @@ app = Flask(__name__)
 def index():
     if request.method == 'POST':
         sentence = request.form['sentence']
-        extended_sentence = sentence + get_chart_from_sentence(sentence)
-        return render_template('index.html', sentence=extended_sentence)
+        chart =  get_chart_from_sentence(sentence)
+        extended_sentence = sentence + chart[0][0]
+        return render_template('index.html', sentence=extended_sentence, chart=chart)
     return render_template('index.html')
 
 if __name__ == '__main__':
