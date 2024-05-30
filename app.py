@@ -1,9 +1,11 @@
-from openai import OpenAI
+#from openai import OpenAI
 import numpy as np
 import os
-from flask import Flask, request, render_template, jsonify
-from transformers import GPT2LMHeadModel, GPT2Tokenizer
-import torch
+import json
+from flask import Flask, request, render_template, Response, session, stream_with_context
+import time
+#from transformers import GPT2LMHeadModel, GPT2Tokenizer
+#import torch
 from gpt2 import next_token_probabilities
 
 USE_GPT_3 = False
@@ -61,8 +63,7 @@ def index():
     return render_template('index.html')
 
 def generate_updates(content):
-    while session.get('send_updates', False):
-      # Generate your JSON data here
+    while True:
       if USE_GPT_3:
         table_data, largest_prob_token = get_chart_from_sentence(content)
       else:
@@ -75,25 +76,24 @@ def generate_updates(content):
         'table': table_data,
         'largest_prob_token': largest_prob_token
       }
-      yield response_data
-      time.sleep(1)  # Send update every second
+      yield json.dumps(response_data)
+      time.sleep(0.5)  # Send update every second
 
-@app.route('/start_updates', methods=['POST'])
+@app.route('/update_sentence', methods=['POST'])
 def start_updates():
-    session['send_updates'] = True
-    session['content'] = request.form['content']
-    return '', 200
-
-@app.route('/stop_updates', methods=['POST'])
-def stop_updates():
-    session['send_updates'] = False
-    return '', 200
+    with app.app_context():
+      session['content'] = request.form['content']
+    #return render_template('index.html')
 
 @app.route('/updates')
 def updates():
-    content = session.get('content', "undef")
+    content = None
+    with app.app_context():
+      content = session.get('content', "undef")
+
     if content == "undef":
       print("Content is undefined")
+
     return Response(generate_updates(content), content_type='text/event-stream')
 
 if __name__ == '__main__':

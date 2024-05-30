@@ -42,11 +42,11 @@
 </head>
 <body>
     <div id="container">
-        <form id="textForm" action="/submit" method="post">
-            <textarea id="textarea" name="content" rows="10" cols="30"></textarea>
-            <br>
-            <button type="submit">Submit</button>
-        </form>
+      <div>
+          <textarea id="textarea" name="content" rows="10" cols="30"></textarea>
+          <br>
+          <button id="startBtn">Start Generation</button>
+      </div>
 
         <table id="resultTable">
             <thead>
@@ -61,40 +61,46 @@
     </div>
 
     <script>
-        document.getElementById('textForm').addEventListener('submit', function(event) {
-            event.preventDefault();
-            const formData = new FormData(this);
+        const startBtn = document.getElementById('startBtn');
+        let eventSource;
 
-            fetch('/submit', {
-                method: 'POST',
-                body: formData
-            })
-            .then(response => response.json())
-            .then(data => {
-                document.getElementById('textarea').value = data["modified_content"].replace(/\\n/g, '\n');
-                const tableBody = document.getElementById('resultTableBody');
-                table = data['table'];
-                // Sort the table based on probability
-                table = Object.fromEntries(Object.entries(table).sort((a, b) => b[1] - a[1]));
+        startBtn.addEventListener('click', () => {
+            if (startBtn.innerText === 'Start Generation') {
+              eventSource = new EventSource('/updates');
+              console.log("Generating new event source");
+              eventSource.onmessage = (event) => {
+                  const data = JSON.parse(event.data);
+                  console.log("Received update data ", data);
+                  document.getElementById('textarea').value = data["modified_content"].replace(/\\n/g, '\n');
+                  const tableBody = document.getElementById('resultTableBody');
+                  table = data['table'];
+                  // Sort the table based on probability
+                  table = Object.fromEntries(Object.entries(table).sort((a, b) => b[1] - a[1]));
 
-                tableBody.innerHTML = ""; // Clear previous table contents
-                for (const [word, probability] of Object.entries(table)) {
-                    console.log(word, probability);
-                    const row = document.createElement('tr');
-                    const wordCell = document.createElement('td');
-                    const probabilityCell = document.createElement('td');
-                    wordCell.innerText = word;
-                    probabilityCell.innerText = probability;
-                    if (word == data["largest_prob_token"]) {
-                        wordCell.style.backgroundColor = 'yellow';
-                        probabilityCell.style.backgroundColor = 'yellow';
-                    }
-                    row.appendChild(wordCell);
-                    row.appendChild(probabilityCell);
-                    tableBody.appendChild(row);
-                }
-            });
+                  tableBody.innerHTML = ""; // Clear previous table contents
+                  for (const [word, probability] of Object.entries(table)) {
+                      console.log(word, probability);
+                      const row = document.createElement('tr');
+                      const wordCell = document.createElement('td');
+                      const probabilityCell = document.createElement('td');
+                      wordCell.innerText = word;
+                      probabilityCell.innerText = probability;
+                      if (word == data["largest_prob_token"]) {
+                          wordCell.style.backgroundColor = 'yellow';
+                          probabilityCell.style.backgroundColor = 'yellow';
+                      }
+                      row.appendChild(wordCell);
+                      row.appendChild(probabilityCell);
+                      tableBody.appendChild(row);
+                  }
+                };
+                startBtn.innerText = 'Stop Generation';
+            } else {
+                eventSource.close();
+                startBtn.innerText = 'Start Generation';
+            }
         });
+
     </script>
 </body>
 </html>
