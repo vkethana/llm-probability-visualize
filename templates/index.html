@@ -4,24 +4,61 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Text Area Submission</title>
+    <style>
+      body { 
+        max-width: 750px; 
+        margin: 40px auto; 
+        padding: 0 10px; 
+        font: 12px/1.5 -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, "Noto Sans", sans-serif, "Apple Color Emoji", "Segoe UI Emoji", "Segoe UI Symbol", "Noto Color Emoji"; 
+        color: #444 
+      } 
+      h1,h2,h3 { 
+        line-height: 1.2;
+        text-align: center;
+      } 
+      h4 { 
+        line-height: 0.5 
+      } 
+      #container {
+          display: flex;
+          align-items: flex-start;
+          gap: 20px;
+      }
+      #textForm {
+          margin-right: 20px;
+      }
+      #resultTable {
+          border-collapse: collapse;
+          width: 150px; /* Set a fixed width for the table */
+      }
+      #resultTable th, #resultTable td {
+          border: 1px solid black;
+          padding: 8px;
+      }
+      #resultTable th {
+          background-color: #f2f2f2;
+      }
+    </style>
 </head>
 <body>
-    <form id="textForm" action="/submit" method="post">
-        <textarea id="textarea" name="content" rows="10" cols="30"></textarea>
-        <br>
-        <button type="submit">Submit</button>
-    </form>
+    <div id="container">
+        <form id="textForm" action="/submit" method="post">
+            <textarea id="textarea" name="content" rows="10" cols="30"></textarea>
+            <br>
+            <button type="submit">Submit</button>
+        </form>
 
-    <table id="resultTable">
-        <thead>
-            <tr>
-                <th>Word</th>
-                <th>Probability</th>
-            </tr>
-        </thead>
-        <tbody id="resultTableBody">
-        </tbody>
-    </table>
+        <table id="resultTable">
+            <thead>
+                <tr>
+                    <th>Word</th>
+                    <th>%</th>
+                </tr>
+            </thead>
+            <tbody id="resultTableBody">
+            </tbody>
+        </table>
+    </div>
 
     <script>
         document.getElementById('textForm').addEventListener('submit', function(event) {

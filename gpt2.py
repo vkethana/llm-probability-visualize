@@ -43,7 +43,7 @@ def next_token_probabilities(prompt):
     print("Biggest word:", max_word)
     my_dict = {}
     for word, prob in words:
-        my_dict[word] = round(float(prob), 3)
+        my_dict[word] = round(100 * float(prob), 3)
     return my_dict, max_word
 
 if __name__ == "__main__":

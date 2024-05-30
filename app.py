@@ -64,6 +64,9 @@ def index():
 def submit():
     content = request.form['content']
     print(f"Submitted content: {content}")
+    if content == "":
+      content = " "
+
     if USE_GPT_3:
       table_data, largest_prob_token = get_chart_from_sentence(content)
     else:
