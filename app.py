@@ -42,17 +42,3 @@ def get_chart_from_sentence(sentence):
   output.sort(key=lambda x: x[1], reverse=True)
   return output
 
-app = Flask(__name__)
-
-@app.route('/', methods=['GET', 'POST'])
-def index():
-    if request.method == 'POST':
-        sentence = request.form['sentence']
-        chart =  get_chart_from_sentence(sentence)
-        extended_sentence = sentence + chart[0][0]
-        return render_template('index.html', sentence=extended_sentence, chart=chart)
-    return render_template('index.html')
-
-if __name__ == '__main__':
-    app.run(debug=True)
-
