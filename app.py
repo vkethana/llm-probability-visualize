@@ -1,13 +1,18 @@
 from openai import OpenAI
 import numpy as np
 import os
-from flask import Flask, render_template, request
+from flask import Flask, request, render_template, jsonify
+from transformers import GPT2LMHeadModel, GPT2Tokenizer
+import torch
+from gpt2 import next_token_probabilities
 
-client = OpenAI(api_key=os.environ["OPENAI_API_KEY"])
-model = "gpt-3.5-turbo-instruct"
+USE_GPT_3 = False
+
+if USE_GPT_3:
+  client = OpenAI(api_key=os.environ["OPENAI_API_KEY"])
+  model = "gpt-3.5-turbo-instruct"
 
 def call_gpt(prompt):
-
   response = client.completions.create(model=model,
   prompt=prompt,
   max_tokens=1,
@@ -27,18 +32,51 @@ def softmax(x):
 
 def get_chart_from_sentence(sentence):
   response = call_gpt(sentence)
-  print(response)
+  #print(response)
   probabilities = response.choices[0].logprobs.top_logprobs[0]
-# Extracting scores and normalizing probabilities
+
+  # Extracting scores and normalizing probabilities
   scores = np.array(list(probabilities.values()))
   normalized_probs = softmax(scores)
-  output = []
-# Output probabilities for each token
+  output = {}
+
+  # Output probabilities for each token
   for token, probability in zip(probabilities.keys(), normalized_probs):
       # Print out the raw token, if its "\n" then don't actually print a newline
       token = token.replace("\n", "\\n")
       print(f'"{token}" with probability {probability:.2f}')
-      output.append([token, round(probability, 2)])
-  output.sort(key=lambda x: x[1], reverse=True)
-  return output
+      output[token] = round(probability, 3)
+  # Sort output by probability
+  output = dict(sorted(output.items(), key=lambda item: item[1], reverse=True))
+  # Get largest probability item
+  largest_prob_token = max(output, key=output.get)
+  print(f"Output: {output}")
+  print(f"Largest probability token: {largest_prob_token}")
+  return output, largest_prob_token
+
+app = Flask(__name__)
+
+@app.route('/')
+def index():
+    return render_template('index.html')
+
+@app.route('/submit', methods=['POST'])
+def submit():
+    content = request.form['content']
+    print(f"Submitted content: {content}")
+    if USE_GPT_3:
+      table_data, largest_prob_token = get_chart_from_sentence(content)
+    else:
+      table_data, largest_prob_token = next_token_probabilities(content)
+    print(table_data, largest_prob_token)
+    content += largest_prob_token
+    response_data = {
+      'modified_content': content,
+      'table': table_data,
+      'largest_prob_token': largest_prob_token
+    }
+    return jsonify(response_data)
+
+if __name__ == '__main__':
+    app.run(debug=True)
 

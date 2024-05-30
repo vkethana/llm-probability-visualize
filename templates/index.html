@@ -1,0 +1,64 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Text Area Submission</title>
+</head>
+<body>
+    <form id="textForm" action="/submit" method="post">
+        <textarea id="textarea" name="content" rows="10" cols="30"></textarea>
+        <br>
+        <button type="submit">Submit</button>
+    </form>
+
+    <table id="resultTable">
+        <thead>
+            <tr>
+                <th>Word</th>
+                <th>Probability</th>
+            </tr>
+        </thead>
+        <tbody id="resultTableBody">
+        </tbody>
+    </table>
+
+    <script>
+        document.getElementById('textForm').addEventListener('submit', function(event) {
+            event.preventDefault();
+            const formData = new FormData(this);
+
+            fetch('/submit', {
+                method: 'POST',
+                body: formData
+            })
+            .then(response => response.json())
+            .then(data => {
+                document.getElementById('textarea').value = data["modified_content"].replace(/\\n/g, '\n');
+                const tableBody = document.getElementById('resultTableBody');
+                table = data['table'];
+                // Sort the table based on probability
+                table = Object.fromEntries(Object.entries(table).sort((a, b) => b[1] - a[1]));
+
+                tableBody.innerHTML = ""; // Clear previous table contents
+                for (const [word, probability] of Object.entries(table)) {
+                    console.log(word, probability);
+                    const row = document.createElement('tr');
+                    const wordCell = document.createElement('td');
+                    const probabilityCell = document.createElement('td');
+                    wordCell.innerText = word;
+                    probabilityCell.innerText = probability;
+                    if (word == data["largest_prob_token"]) {
+                        wordCell.style.backgroundColor = 'yellow';
+                        probabilityCell.style.backgroundColor = 'yellow';
+                    }
+                    row.appendChild(wordCell);
+                    row.appendChild(probabilityCell);
+                    tableBody.appendChild(row);
+                }
+            });
+        });
+    </script>
+</body>
+</html>
+
