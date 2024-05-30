@@ -14,11 +14,10 @@
 </head>
 <body>
     <h1>GPT-2 Probabilities Visualizer</h1>
-    <form method="post">
-        <label for="sentence">Enter Sentence:</label>
-        <input type="text" id="sentence" name="sentence" required>
-        <button type="submit">Complete</button>
-    </form>
+    <textarea id="sentence" name="sentence" rows="4" cols="50">
+    At w3schools.com you will learn how to make a website. They offer free tutorials in all web development technologies.
+    </textarea>
+
     {% if sentence %}
     <p>Extended Sentence: {{ sentence }}</p>
     {% endif %}
