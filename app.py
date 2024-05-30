@@ -60,25 +60,41 @@ app = Flask(__name__)
 def index():
     return render_template('index.html')
 
-@app.route('/submit', methods=['POST'])
-def submit():
-    content = request.form['content']
-    print(f"Submitted content: {content}")
-    if content == "":
-      content = " "
+def generate_updates(content):
+    while session.get('send_updates', False):
+      # Generate your JSON data here
+      if USE_GPT_3:
+        table_data, largest_prob_token = get_chart_from_sentence(content)
+      else:
+        table_data, largest_prob_token = next_token_probabilities(content)
 
-    if USE_GPT_3:
-      table_data, largest_prob_token = get_chart_from_sentence(content)
-    else:
-      table_data, largest_prob_token = next_token_probabilities(content)
-    print(table_data, largest_prob_token)
-    content += largest_prob_token
-    response_data = {
-      'modified_content': content,
-      'table': table_data,
-      'largest_prob_token': largest_prob_token
-    }
-    return jsonify(response_data)
+      print(table_data, largest_prob_token)
+      content += largest_prob_token
+      response_data = {
+        'modified_content': content,
+        'table': table_data,
+        'largest_prob_token': largest_prob_token
+      }
+      yield response_data
+      time.sleep(1)  # Send update every second
+
+@app.route('/start_updates', methods=['POST'])
+def start_updates():
+    session['send_updates'] = True
+    session['content'] = request.form['content']
+    return '', 200
+
+@app.route('/stop_updates', methods=['POST'])
+def stop_updates():
+    session['send_updates'] = False
+    return '', 200
+
+@app.route('/updates')
+def updates():
+    content = session.get('content', "undef")
+    if content == "undef":
+      print("Content is undefined")
+    return Response(generate_updates(content), content_type='text/event-stream')
 
 if __name__ == '__main__':
     app.run(debug=True)
