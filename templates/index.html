@@ -5,8 +5,8 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Text Area Submission</title>
     <style>
-      body { 
-        max-width: 750px; 
+      body, footer { 
+        max-width: 500px; 
         margin: 40px auto; 
         padding: 0 10px; 
         font: 12px/1.5 -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, "Noto Sans", sans-serif, "Apple Color Emoji", "Segoe UI Emoji", "Segoe UI Symbol", "Noto Color Emoji"; 
@@ -14,7 +14,6 @@
       } 
       h1,h2,h3 { 
         line-height: 1.2;
-        text-align: center;
       } 
       h4 { 
         line-height: 0.5 
@@ -23,13 +22,18 @@
           display: flex;
           align-items: flex-start;
           gap: 20px;
+          width: 500px;
+          margin: auto;
       }
       #textForm {
-          margin-right: 20px;
+          min-height: 50px; /* Minimum height */
+          max-height: 380px; /* Maximum height */
+          overflow-y: auto; /* Enable scroll if content exceeds max height */
+          resize: none; /* Disable manual resizing */
       }
       #resultTable {
           border-collapse: collapse;
-          width: 150px; /* Set a fixed width for the table */
+          width: 180px; /* Set a fixed width for the table */
       }
       #resultTable th, #resultTable td {
           border: 1px solid black;
@@ -38,9 +42,16 @@
       #resultTable th {
           background-color: #f2f2f2;
       }
+      hr {
+        height: 0px;
+        border: none;
+        border-top: 0.7px solid grey;
+      }
     </style>
 </head>
 <body>
+    <h1 style="text-align:center">Visualize LLM Probabilities</h1>
+    <br />
     <div id="container">
       <div>
           <textarea id="textarea" name="content" rows="10" cols="30"></textarea>
@@ -48,7 +59,8 @@
           <button id="startBtn">Start Generation</button>
       </div>
 
-        <table id="resultTable">
+      <!--<table id="resultTable" style="display: none;">-->
+      <table id="resultTable">
             <thead>
                 <tr>
                     <th>Word</th>
@@ -59,18 +71,39 @@
             </tbody>
         </table>
     </div>
+    <br />
+    <br />
+    <hr />
+    Made by Vijay Kethanaboyina at <a href="https://vkethana.com">vkethana.com</a>
 
     <script>
         const startBtn = document.getElementById('startBtn');
         let eventSource;
 
         startBtn.addEventListener('click', () => {
+            // Fetch a POST request so autocompletion knows what the current text is
+
+            fetch('/update_sentence', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify(document.getElementById('textarea').value)
+            })
+            .then(data => {
+                console.log('Success sending sentence to server');
+            })
+            .catch((error) => {
+                console.error('Error:', error);
+            });
+
             if (startBtn.innerText === 'Start Generation') {
+
               eventSource = new EventSource('/updates');
               console.log("Generating new event source");
               eventSource.onmessage = (event) => {
                   const data = JSON.parse(event.data);
-                  console.log("Received update data ", data);
+                  //console.log("Received update data ", data);
                   document.getElementById('textarea').value = data["modified_content"].replace(/\\n/g, '\n');
                   const tableBody = document.getElementById('resultTableBody');
                   table = data['table'];
@@ -79,7 +112,7 @@
 
                   tableBody.innerHTML = ""; // Clear previous table contents
                   for (const [word, probability] of Object.entries(table)) {
-                      console.log(word, probability);
+                      //console.log(word, probability);
                       const row = document.createElement('tr');
                       const wordCell = document.createElement('td');
                       const probabilityCell = document.createElement('td');
@@ -96,10 +129,22 @@
                 };
                 startBtn.innerText = 'Stop Generation';
             } else {
+                console.log("Closing event source");
                 eventSource.close();
                 startBtn.innerText = 'Start Generation';
             }
         });
+
+        const textarea = document.getElementById('textarea');
+        textarea.addEventListener('input', () => {
+            // Reset height to auto to allow shrinking
+            textarea.style.height = 'auto';
+            // Calculate the new height based on the scroll height
+            textarea.style.height = Math.min(textarea.scrollHeight, 380) + 'px';
+        });
+
+        // Trigger the input event to set the initial height
+        textarea.dispatchEvent(new Event('input'));
 
     </script>
 </body>

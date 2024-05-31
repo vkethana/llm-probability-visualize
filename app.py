@@ -1,11 +1,11 @@
-#from openai import OpenAI
+from openai import OpenAI
 import numpy as np
 import os
 import json
 from flask import Flask, request, render_template, Response, session, stream_with_context
 import time
 #from transformers import GPT2LMHeadModel, GPT2Tokenizer
-#import torch
+import torch
 from gpt2 import next_token_probabilities
 
 USE_GPT_3 = False
@@ -13,6 +13,10 @@ USE_GPT_3 = False
 if USE_GPT_3:
   client = OpenAI(api_key=os.environ["OPENAI_API_KEY"])
   model = "gpt-3.5-turbo-instruct"
+
+app = Flask(__name__)
+app.config['SECRET_KEY'] = os.environ["FLASK_SESSION_SECRET"]
+#print("FLASK_SESSION=", app.config['SECRET_KEY'])
 
 def call_gpt(prompt):
   response = client.completions.create(model=model,
@@ -56,8 +60,6 @@ def get_chart_from_sentence(sentence):
   print(f"Largest probability token: {largest_prob_token}")
   return output, largest_prob_token
 
-app = Flask(__name__)
-
 @app.route('/')
 def index():
     return render_template('index.html')
@@ -69,33 +71,33 @@ def generate_updates(content):
       else:
         table_data, largest_prob_token = next_token_probabilities(content)
 
-      print(table_data, largest_prob_token)
+      #print(table_data, largest_prob_token)
       content += largest_prob_token
+
       response_data = {
         'modified_content': content,
         'table': table_data,
         'largest_prob_token': largest_prob_token
       }
-      yield json.dumps(response_data)
-      time.sleep(0.5)  # Send update every second
+      #yield json.dumps(response_data)
+      yield f"data: {json.dumps(response_data)}\n\n"
+      time.sleep(0.1)  # Send update every second
 
 @app.route('/update_sentence', methods=['POST'])
-def start_updates():
+def update_sentence():
     with app.app_context():
-      session['content'] = request.form['content']
+      session['content'] = str(request.get_json())
+      print("JSON: ", session['content'])
+    return "Successfully updated", 200
     #return render_template('index.html')
 
 @app.route('/updates')
 def updates():
     content = None
     with app.app_context():
-      content = session.get('content', "undef")
-
-    if content == "undef":
-      print("Content is undefined")
-
+      content = session.get('content', "...")
+    print("retreived sentence content", content)
     return Response(generate_updates(content), content_type='text/event-stream')
 
 if __name__ == '__main__':
     app.run(debug=True)
-
