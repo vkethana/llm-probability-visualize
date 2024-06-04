@@ -5,7 +5,6 @@ import json
 from flask import Flask, request, render_template, Response, session, stream_with_context, jsonify
 from flask_session import Session
 import time
-import torch
 from gpt2 import next_token_probabilities
 
 USE_GPT_3 = True
