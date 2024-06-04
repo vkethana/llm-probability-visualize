@@ -5,22 +5,21 @@ import json
 from flask import Flask, request, render_template, Response, session, stream_with_context, jsonify
 from flask_session import Session
 import time
-from gpt2 import next_token_probabilities
+from gpt2 import next_token_probabilities as next_token_probs_gpt_2
 
-USE_GPT_3 = True
-
-if USE_GPT_3:
-  client = OpenAI(api_key=os.environ["OPENAI_API_KEY"])
-  model = "gpt-3.5-turbo-instruct"
-
+'''
+In order to run this app on a webserver, you need to make an environment variable for the Flask session secret
+'''
 app = Flask(__name__)
 app.config['SECRET_KEY'] = os.environ["FLASK_SESSION_SECRET"]
-#print("FLASK_SESSION=", app.config['SECRET_KEY'])
 app.config["SESSION_TYPE"] = "filesystem"
 Session(app)
 
-def call_gpt(prompt):
-  response = client.completions.create(model=model,
+def call_gpt(prompt, client):
+  '''
+  This method is only used for gpt3
+  '''
+  response = client.completions.create(model='gpt-3.5-turbo-instruct',
   prompt=prompt,
   max_tokens=1,
   n=1,
@@ -37,9 +36,16 @@ def softmax(x):
     e_x = np.exp(x - np.max(x))
     return e_x / e_x.sum()
 
-def get_chart_from_sentence(sentence):
-  response = call_gpt(sentence)
-  #print(response)
+def next_token_probs_gpt_3(sentence, api_key):
+  '''
+  Gpt-2 inference is located in a separate function.
+  '''
+  client = OpenAI(api_key=api_key)
+  try:
+    response = call_gpt(sentence, client)
+  except Exception as e:
+    return {}, ""
+
   probabilities = response.choices[0].logprobs.top_logprobs[0]
 
   # Extracting scores and normalizing probabilities
@@ -70,15 +76,18 @@ def generate_updates():
     # Get the content from the request
     data = request.get_json()
     content = data['content']
-    print(f"Content: {content}")
+    model = data['model']
+    api_key = data['api_key']
+
+    #print(f"Content: {content}")
     if content == None or content == "":
-      print("BLank content")
+      #print("Blank content")
       return "data: {}\n\n"
 
-    if USE_GPT_3:
-      table_data, largest_prob_token = get_chart_from_sentence(content)
+    if model == 'gpt-3':
+      table_data, largest_prob_token = next_token_probs_gpt_3(content, api_key)
     else:
-      table_data, largest_prob_token = next_token_probabilities(content)
+      table_data, largest_prob_token = next_token_probs_gpt_2(content)
 
     content += largest_prob_token
 

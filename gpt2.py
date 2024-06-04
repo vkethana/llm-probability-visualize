@@ -40,7 +40,7 @@ def next_token_probabilities(prompt):
     words = list(zip(top_k_tokens, top_k_probs.cpu().numpy()))
     # Get largest word in words
     max_word = max(words, key=lambda x: x[1])[0]
-    print("Biggest word:", max_word)
+    #print("Biggest word:", max_word)
     my_dict = {}
     for word, prob in words:
         my_dict[word] = round(100 * float(prob), 3)
@@ -50,4 +50,4 @@ if __name__ == "__main__":
   # example usage
   prompt = "the quick brown fox"
   top_k_predictions, max_word = next_token_probabilities(prompt)
-  print("top predictions:", top_k_predictions, "\nmax word:", max_word)
+  #print("top predictions:", top_k_predictions, "\nmax word:", max_word)
