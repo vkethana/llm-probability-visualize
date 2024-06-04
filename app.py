@@ -2,7 +2,7 @@ from openai import OpenAI
 import numpy as np
 import os
 import json
-from flask import Flask, request, render_template, Response, session, stream_with_context
+from flask import Flask, request, render_template, Response, session, stream_with_context, jsonify
 from flask_session import Session
 import time
 import torch
@@ -66,49 +66,29 @@ def get_chart_from_sentence(sentence):
 def index():
     return render_template('index.html')
 
-def generate_updates(content):
-    while True:
-      if USE_GPT_3:
-        table_data, largest_prob_token = get_chart_from_sentence(content)
-      else:
-        table_data, largest_prob_token = next_token_probabilities(content)
+@app.route('/extend_sentence', methods=['POST'])
+def generate_updates():
+    # Get the content from the request
+    data = request.get_json()
+    content = data['content']
+    print(f"Content: {content}")
+    if content == None or content == "":
+      print("BLank content")
+      return "data: {}\n\n"
 
-      #print(table_data, largest_prob_token)
-      content += largest_prob_token
+    if USE_GPT_3:
+      table_data, largest_prob_token = get_chart_from_sentence(content)
+    else:
+      table_data, largest_prob_token = next_token_probabilities(content)
 
-      response_data = {
-        'modified_content': content,
-        'table': table_data,
-        'largest_prob_token': largest_prob_token
-      }
-      #yield json.dumps(response_data)
-      yield f"data: {json.dumps(response_data)}\n\n"
-      time.sleep(0.1)  # Send update every second
+    content += largest_prob_token
 
-@app.route('/update_sentence', methods=['POST'])
-def update_sentence():
-    #with app.app_context():
-    session['content'] = str(request.get_json())
-    session.modified = True
-    print("JSON: ", session.get('content', '...'))
-    session_variables = {key: session[key] for key in session.keys()}
-    print("(...)        Session variables: ", session_variables)
-    return "Successfully updated", 200
-    #return render_template('index.html')
-
-@app.route('/updates')
-def updates():
-    content = None
-
-    #with app.app_context():
-    content = session.get('content', "...")
-    session_variables = {key: session[key] for key in session.keys()}
-    print("[!!]        Session variables: ", session_variables)
-    print()
-    print()
-
-    print("retreived sentence content", content)
-    return Response(generate_updates(content), content_type='text/event-stream')
+    response_data = {
+      'modified_content': content,
+      'table': table_data,
+      'largest_prob_token': largest_prob_token
+    }
+    return jsonify(response_data)
 
 if __name__ == '__main__':
     app.run(debug=True)

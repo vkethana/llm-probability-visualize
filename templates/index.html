@@ -79,17 +79,51 @@
     <script>
         const startBtn = document.getElementById('startBtn');
         let eventSource;
+        let intervalId;
+
+        function updateTextBoxAndTable(data) {
+          console.log(data['data']);
+          document.getElementById('textarea').value = data["modified_content"].replace(/\\n/g, '\n');
+          const tableBody = document.getElementById('resultTableBody');
+          table = data['table'];
+          // Sort the table based on probability
+          table = Object.fromEntries(Object.entries(table).sort((a, b) => b[1] - a[1]));
+
+          tableBody.innerHTML = ""; // Clear previous table contents
+          for (const [word, probability] of Object.entries(table)) {
+              //console.log(word, probability);
+              const row = document.createElement('tr');
+              const wordCell = document.createElement('td');
+              const probabilityCell = document.createElement('td');
+              wordCell.innerText = word;
+              probabilityCell.innerText = probability;
+              if (word == data["largest_prob_token"]) {
+                  wordCell.style.backgroundColor = 'yellow';
+                  probabilityCell.style.backgroundColor = 'yellow';
+              }
+              row.appendChild(wordCell);
+              row.appendChild(probabilityCell);
+              tableBody.appendChild(row);
+          }
+        }
 
         function sendUpdatedSentence() {
-            fetch('/update_sentence', {
+            console.log("making post request");
+            content = document.getElementById('textarea').value;
+            data = {content: content};
+
+            fetch('/extend_sentence', {
                 method: 'POST',
                 headers: {
                     'Content-Type': 'application/json',
                 },
-                body: JSON.stringify(document.getElementById('textarea').value)
+                body: JSON.stringify(data),
             })
+            .then(response => response.json())
             .then(data => {
                 console.log('Success sending sentence to server');
+                console.log('Got back the following data:', data);
+                updateTextBoxAndTable(data);
             })
             .catch((error) => {
                 console.error('Error:', error);
@@ -99,45 +133,15 @@
         startBtn.addEventListener('click', () => {
             // Fetch a POST request so autocompletion knows what the current text is
             if (startBtn.innerText === 'Start Generation') {
-              sendUpdatedSentence();
-              eventSource = new EventSource('/updates');
-              console.log("Generating new event source");
-              eventSource.onmessage = (event) => {
-                  //sendUpdatedSentence();
-                  const data = JSON.parse(event.data);
-                  //console.log("Received update data ", data);
-                  document.getElementById('textarea').value = data["modified_content"].replace(/\\n/g, '\n');
-                  const tableBody = document.getElementById('resultTableBody');
-                  table = data['table'];
-                  // Sort the table based on probability
-                  table = Object.fromEntries(Object.entries(table).sort((a, b) => b[1] - a[1]));
-
-                  tableBody.innerHTML = ""; // Clear previous table contents
-                  for (const [word, probability] of Object.entries(table)) {
-                      //console.log(word, probability);
-                      const row = document.createElement('tr');
-                      const wordCell = document.createElement('td');
-                      const probabilityCell = document.createElement('td');
-                      wordCell.innerText = word;
-                      probabilityCell.innerText = probability;
-                      if (word == data["largest_prob_token"]) {
-                          wordCell.style.backgroundColor = 'yellow';
-                          probabilityCell.style.backgroundColor = 'yellow';
-                      }
-                      row.appendChild(wordCell);
-                      row.appendChild(probabilityCell);
-                      tableBody.appendChild(row);
-                  }
-                };
+                intervalId = setInterval(sendUpdatedSentence, 250);
                 startBtn.innerText = 'Stop Generation';
             } else {
-                console.log("Closing event source");
-                eventSource.close();
                 startBtn.innerText = 'Start Generation';
-                sendUpdatedSentence();
+                clearInterval(intervalId);
             }
         });
 
+        // Fix textarea height bug
         const textarea = document.getElementById('textarea');
         textarea.addEventListener('input', () => {
             // Reset height to auto to allow shrinking
