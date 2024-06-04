@@ -80,9 +80,7 @@
         const startBtn = document.getElementById('startBtn');
         let eventSource;
 
-        startBtn.addEventListener('click', () => {
-            // Fetch a POST request so autocompletion knows what the current text is
-
+        function sendUpdatedSentence() {
             fetch('/update_sentence', {
                 method: 'POST',
                 headers: {
@@ -96,12 +94,16 @@
             .catch((error) => {
                 console.error('Error:', error);
             });
+        }
 
+        startBtn.addEventListener('click', () => {
+            // Fetch a POST request so autocompletion knows what the current text is
             if (startBtn.innerText === 'Start Generation') {
-
+              sendUpdatedSentence();
               eventSource = new EventSource('/updates');
               console.log("Generating new event source");
               eventSource.onmessage = (event) => {
+                  //sendUpdatedSentence();
                   const data = JSON.parse(event.data);
                   //console.log("Received update data ", data);
                   document.getElementById('textarea').value = data["modified_content"].replace(/\\n/g, '\n');
@@ -132,6 +134,7 @@
                 console.log("Closing event source");
                 eventSource.close();
                 startBtn.innerText = 'Start Generation';
+                sendUpdatedSentence();
             }
         });
 

@@ -3,12 +3,12 @@ import numpy as np
 import os
 import json
 from flask import Flask, request, render_template, Response, session, stream_with_context
+from flask_session import Session
 import time
-#from transformers import GPT2LMHeadModel, GPT2Tokenizer
 import torch
 from gpt2 import next_token_probabilities
 
-USE_GPT_3 = False
+USE_GPT_3 = True
 
 if USE_GPT_3:
   client = OpenAI(api_key=os.environ["OPENAI_API_KEY"])
@@ -17,6 +17,8 @@ if USE_GPT_3:
 app = Flask(__name__)
 app.config['SECRET_KEY'] = os.environ["FLASK_SESSION_SECRET"]
 #print("FLASK_SESSION=", app.config['SECRET_KEY'])
+app.config["SESSION_TYPE"] = "filesystem"
+Session(app)
 
 def call_gpt(prompt):
   response = client.completions.create(model=model,
@@ -50,14 +52,14 @@ def get_chart_from_sentence(sentence):
   for token, probability in zip(probabilities.keys(), normalized_probs):
       # Print out the raw token, if its "\n" then don't actually print a newline
       token = token.replace("\n", "\\n")
-      print(f'"{token}" with probability {probability:.2f}')
+      #print(f'"{token}" with probability {probability:.2f}')
       output[token] = round(probability, 3)
   # Sort output by probability
   output = dict(sorted(output.items(), key=lambda item: item[1], reverse=True))
   # Get largest probability item
   largest_prob_token = max(output, key=output.get)
-  print(f"Output: {output}")
-  print(f"Largest probability token: {largest_prob_token}")
+  #print(f"Output: {output}")
+  #print(f"Largest probability token: {largest_prob_token}")
   return output, largest_prob_token
 
 @app.route('/')
@@ -85,17 +87,26 @@ def generate_updates(content):
 
 @app.route('/update_sentence', methods=['POST'])
 def update_sentence():
-    with app.app_context():
-      session['content'] = str(request.get_json())
-      print("JSON: ", session['content'])
+    #with app.app_context():
+    session['content'] = str(request.get_json())
+    session.modified = True
+    print("JSON: ", session.get('content', '...'))
+    session_variables = {key: session[key] for key in session.keys()}
+    print("(...)        Session variables: ", session_variables)
     return "Successfully updated", 200
     #return render_template('index.html')
 
 @app.route('/updates')
 def updates():
     content = None
-    with app.app_context():
-      content = session.get('content', "...")
+
+    #with app.app_context():
+    content = session.get('content', "...")
+    session_variables = {key: session[key] for key in session.keys()}
+    print("[!!]        Session variables: ", session_variables)
+    print()
+    print()
+
     print("retreived sentence content", content)
     return Response(generate_updates(content), content_type='text/event-stream')
 
